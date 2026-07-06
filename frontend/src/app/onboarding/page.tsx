@@ -72,7 +72,7 @@ export default function OnboardingPage() {
 
             <div className="space-y-2">
               <Label>Gender</Label>
-              <Select onValueChange={(val: string) => handleSelectChange("gender", val)}>
+              <Select onValueChange={(val) => handleSelectChange("gender", val || "")}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select Gender" />
                 </SelectTrigger>
@@ -86,7 +86,7 @@ export default function OnboardingPage() {
 
             <div className="space-y-2">
               <Label>Category</Label>
-              <Select onValueChange={(val: string) => handleSelectChange("category", val)}>
+              <Select onValueChange={(val) => handleSelectChange("category", val || "")}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select Category" />
                 </SelectTrigger>
