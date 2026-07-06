@@ -1,13 +1,13 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, MessageSquareText, Search, FileCheck, ArrowRight, Sparkles, FileText, CheckCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 // For the animated gradient text
-const textVariants = {
+const textVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: { 
     opacity: 1, 
