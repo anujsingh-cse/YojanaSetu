@@ -5,6 +5,7 @@ from app.database import get_db
 from app.schemas import UserCreate, UserResponse
 from app.core import security
 from app import models
+from app.services import sms
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/otp/verify")
@@ -27,13 +28,22 @@ def get_current_user_dependency(token: str = Depends(oauth2_scheme), db: Session
 
 @router.post("/otp/send")
 def send_otp(phone: str):
-    # Mock OTP send
-    return {"message": f"OTP sent to {phone}", "mock_otp": "123456"}
+    success = sms.send_verification_code(phone)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification code via SMS provider"
+        )
+    return {"message": "Verification code dispatched successfully"}
 
 @router.post("/otp/verify")
 def verify_otp(phone: str, otp: str, db: Session = Depends(get_db)):
-    if otp != "123456":
-        raise HTTPException(status_code=400, detail="Invalid OTP")
+    is_valid = sms.check_verification_code(phone, otp)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification OTP code"
+        )
     
     # Query database for matching user
     user = db.query(models.User).filter(models.User.phone == phone).first()
