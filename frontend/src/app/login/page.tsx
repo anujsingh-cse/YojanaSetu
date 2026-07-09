@@ -19,7 +19,8 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.post("/auth/otp/send", null, { params: { phone } });
+      const formattedPhone = `+91${phone}`;
+      await api.post("/auth/otp/send", null, { params: { phone: formattedPhone } });
       setStep(2);
     } catch (error) {
       console.error("Failed to send OTP", error);
@@ -32,7 +33,8 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data } = await api.post("/auth/otp/verify", null, { params: { phone, otp } });
+      const formattedPhone = `+91${phone}`;
+      const { data } = await api.post("/auth/otp/verify", null, { params: { phone: formattedPhone, otp } });
       localStorage.setItem("access_token", data.access_token);
       router.push("/onboarding");
     } catch (error) {
