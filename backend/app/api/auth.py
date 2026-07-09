@@ -70,6 +70,8 @@ def update_profile(
 ):
     # Update profile fields with incoming data
     for field, value in user_data.model_dump(exclude_unset=True).items():
+        if field == "phone":
+            continue
         setattr(current_user, field, value)
         
     db.commit()
