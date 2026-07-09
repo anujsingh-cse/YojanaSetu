@@ -1,6 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, schemes, documents, applications, chat
+from app.database import engine
+from app.models import Base
+
+# Automatically create database tables if they do not exist
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="YojanaSetu API", version="1.0.0")
 
