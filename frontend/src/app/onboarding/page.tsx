@@ -20,6 +20,7 @@ export default function OnboardingPage() {
     category: "",
     occupation: "",
     annual_income: "",
+    land_holding_acres: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,7 +39,9 @@ export default function OnboardingPage() {
         ...formData,
         age: parseInt(formData.age),
         annual_income: parseFloat(formData.annual_income),
-        phone: "mock-phone-update", // In a real app this is read from token
+        land_holding_acres: formData.land_holding_acres ? parseFloat(formData.land_holding_acres) : undefined,
+        occupation: formData.occupation || undefined,
+        // phone derives from the JWT on the backend; the client never sends it
       });
       router.push("/dashboard");
     } catch (error) {
@@ -95,6 +98,25 @@ export default function OnboardingPage() {
                   <SelectItem value="OBC">OBC</SelectItem>
                   <SelectItem value="SC">SC</SelectItem>
                   <SelectItem value="ST">ST</SelectItem>
+                  <SelectItem value="BPL">BPL</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Occupation</Label>
+              <Select onValueChange={(val: string | null) => handleSelectChange("occupation", val || "")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Occupation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Farmer">Farmer</SelectItem>
+                  <SelectItem value="unorganized">Unorganized Worker</SelectItem>
+                  <SelectItem value="Student">Student</SelectItem>
+                  <SelectItem value="Business">Business</SelectItem>
+                  <SelectItem value="Govt Employee">Govt Employee</SelectItem>
+                  <SelectItem value="Homemaker">Homemaker</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -107,6 +129,11 @@ export default function OnboardingPage() {
             <div className="space-y-2">
               <Label htmlFor="annual_income">Annual Family Income (₹)</Label>
               <Input id="annual_income" type="number" required value={formData.annual_income} onChange={handleChange} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="land_holding_acres">Land Holding (acres, 0 if none)</Label>
+              <Input id="land_holding_acres" type="number" step="0.1" value={formData.land_holding_acres} onChange={handleChange} placeholder="e.g., 2.5" />
             </div>
 
             <Button type="submit" className="w-full mt-6" disabled={loading}>

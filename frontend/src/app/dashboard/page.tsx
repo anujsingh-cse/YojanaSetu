@@ -2,15 +2,60 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [userName, setUserName] = useState("Citizen");
-  
+  const [eligibleCount, setEligibleCount] = useState<number | null>(null);
+  const [activeApps, setActiveApps] = useState<number | null>(null);
+  const [pendingDocs, setPendingDocs] = useState<number | null>(null);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+
   useEffect(() => {
-    // In a real app, fetch user details
+    loadDashboard();
   }, []);
+
+  const loadDashboard = async () => {
+    try {
+      const { data: me } = await api.get("/auth/me");
+      setUserName(me.name || "Citizen");
+      const hasProfile = me.age || me.annual_income || me.land_holding_acres || me.category;
+      if (!hasProfile) {
+        setNeedsOnboarding(true);
+        return;
+      }
+      // Eligible schemes
+      try {
+        const { data: matches } = await api.post("/schemes/match", me);
+        setEligibleCount(matches.length);
+        setRecommendations(matches.slice(0, 4));
+      } catch {
+        setEligibleCount(0);
+      }
+      // Applications
+      try {
+        const { data: apps } = await api.get("/applications/");
+        setActiveApps(apps.length);
+      } catch {
+        setActiveApps(0);
+      }
+      // Documents (pending / not verified)
+      try {
+        const { data: docs } = await api.get("/documents/");
+        setPendingDocs(docs.filter((d: any) => d.verification_status !== "verified").length);
+      } catch {
+        setPendingDocs(0);
+      }
+    } catch {
+      // Not logged in -> back to login
+      router.push("/login");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -23,7 +68,7 @@ export default function DashboardPage() {
           <Link href="/applications">
             <Button variant="outline">Track Applications</Button>
           </Link>
-          <Button variant="ghost">Logout</Button>
+          <Button variant="ghost" onClick={() => { localStorage.removeItem("access_token"); router.push("/login"); }}>Logout</Button>
         </div>
       </header>
       
@@ -32,35 +77,47 @@ export default function DashboardPage() {
           <h2 className="text-3xl font-bold">Namaste, {userName}</h2>
           <p className="text-gray-600 mt-2">Here is a quick overview of your welfare schemes.</p>
         </div>
-        
+
+        {needsOnboarding && (
+          <Card className="border-orange-200 bg-orange-50">
+            <CardContent className="p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h3 className="font-semibold text-lg text-orange-700">Complete your profile to find schemes</h3>
+                <p className="text-sm text-gray-600 mt-1">Tell us about yourself so we can match you to eligible government schemes.</p>
+              </div>
+              <Link href="/onboarding"><Button>Complete Profile</Button></Link>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-500">Eligible Schemes</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-green-600">12</div>
+              <div className="text-4xl font-bold text-green-600">{eligibleCount ?? "…"}</div>
               <p className="text-xs text-gray-500 mt-1">Based on your profile</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-500">Active Applications</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-blue-600">2</div>
-              <p className="text-xs text-gray-500 mt-1">Currently under review</p>
+              <div className="text-4xl font-bold text-blue-600">{activeApps ?? "…"}</div>
+              <p className="text-xs text-gray-500 mt-1">Currently tracked</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-500">Pending Documents</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-orange-600">1</div>
-              <p className="text-xs text-gray-500 mt-1">Aadhaar Card missing</p>
+              <div className="text-4xl font-bold text-orange-600">{pendingDocs ?? "…"}</div>
+              <p className="text-xs text-gray-500 mt-1">Awaiting verification</p>
             </CardContent>
           </Card>
         </div>
@@ -72,24 +129,28 @@ export default function DashboardPage() {
               <CardDescription>Top matched schemes based on your profile</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Mock List */}
-              <div className="flex justify-between items-center border-b pb-4">
-                <div>
-                  <h4 className="font-semibold text-lg">PM-KISAN</h4>
-                  <p className="text-sm text-gray-500">₹6,000 / year financial benefit</p>
-                </div>
-                <Button>Apply Now</Button>
-              </div>
-              <div className="flex justify-between items-center border-b pb-4">
-                <div>
-                  <h4 className="font-semibold text-lg">Ayushman Bharat</h4>
-                  <p className="text-sm text-gray-500">₹5 Lakh health cover</p>
-                </div>
-                <Button>Apply Now</Button>
-              </div>
-              <Link href="/eligibility-check" className="w-full">
-                <Button variant="link" className="w-full">View all 12 schemes →</Button>
-              </Link>
+              {recommendations.length === 0 && !needsOnboarding && (
+                <p className="text-sm text-gray-500 pb-2">No matches yet. Try updating your profile.</p>
+              )}
+              {recommendations.map((m: any) => {
+                const s = m.scheme;
+                const benefits = s.benefits;
+                const benefitText = benefits ? Object.entries(benefits).map(([k, v]) => `${v}`.replace(/_/g, " ")).join(", ") : "";
+                return (
+                  <div key={s.id} className="flex justify-between items-center border-b pb-4">
+                    <div>
+                      <h4 className="font-semibold text-lg">{s.scheme_name_en}</h4>
+                      <p className="text-sm text-gray-500">{benefitText}</p>
+                    </div>
+                    <Link href="/eligibility-check"><Button>Apply Now</Button></Link>
+                  </div>
+                );
+              })}
+              {eligibleCount !== null && eligibleCount > 0 && (
+                <Link href="/eligibility-check" className="w-full">
+                  <Button variant="link" className="w-full">View all {eligibleCount} schemes →</Button>
+                </Link>
+              )}
             </CardContent>
           </Card>
 
